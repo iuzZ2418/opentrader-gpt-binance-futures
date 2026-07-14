@@ -1,14 +1,20 @@
+import os
 from pathlib import Path
 
 import company_event_monitor.desktop as desktop
 
 
 def test_native_desktop_uses_local_data_directory(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    if os.name == "nt":
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+        expected = tmp_path / "CompanyEventMonitor"
+    else:
+        monkeypatch.setenv("HOME", str(tmp_path))
+        expected = tmp_path / ".local" / "share" / "CompanyEventMonitor"
 
     target = desktop.user_data_dir()
 
-    assert target == tmp_path / "CompanyEventMonitor"
+    assert target == expected
     assert target.is_dir()
 
 
