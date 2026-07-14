@@ -1,0 +1,33 @@
+[
+  {
+    "source": "okx_official",
+    "source_id": "sample-listing-sol",
+    "doc_type": "announcement",
+    "title": "OKX will list SOL/USDT",
+    "text": "Official announcement: OKX will list Solana (SOL) spot trading. Deposits are open and trading starts today.",
+    "published_at": "2026-06-29T01:00:00Z",
+    "url": "https://example.invalid/okx/sol-listing",
+    "author": "OKX"
+  },
+  {
+    "source": "security_news",
+    "source_id": "sample-eth-exploit",
+    "doc_type": "news",
+    "title": "Ethereum protocol reports exploit",
+    "text": "A verified Ethereum protocol disclosed an exploit and paused contracts while the investigation continues.",
+    "published_at": "2026-06-29T02:00:00Z",
+    "url": "https://example.invalid/news/eth-exploit",
+    "author": "Security Desk"
+  },
+  {
+    "source": "social_unverified",
+    "source_id": "sample-btc-opinion",
+    "doc_type": "post",
+    "title": "BTC opinion",
+    "text": "I think BTC might moon soon! Not financial advice.",
+    "published_at": "2026-06-29T03:00:00Z",
+    "url": "https://example.invalid/post/btc-opinion",
+    "author": "anonymous",
+    "engagement": {"likes": 3, "reposts": 1}
+  }
+]

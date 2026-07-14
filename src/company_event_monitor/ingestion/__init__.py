@@ -1,0 +1,1 @@
+"""Public-source ingestion adapters."""

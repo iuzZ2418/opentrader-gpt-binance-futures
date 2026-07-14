@@ -1,0 +1,507 @@
+name: gpt-futures-trader
+
+x-trader-environment: &trader-environment
+  APP_ENV: ${APP_ENV:-development}
+  DATABASE_URL: sqlite:////app/data/trader.db
+  AUDIT_DATABASE_URL: postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-paper-local-change-me}@postgres:5432/${POSTGRES_DB:-trader}
+  REDIS_URL: redis://redis:6379/0
+  TRADING_STAGE: ${TRADING_STAGE:-paper}
+  EXECUTION_VENUE: ${EXECUTION_VENUE:-internal}
+  LIVE_TRADING_ENABLED: ${LIVE_TRADING_ENABLED:-false}
+  ALLOW_BINANCE_PRODUCTION: ${ALLOW_BINANCE_PRODUCTION:-false}
+  CONTROL_API_TOKEN: ${CONTROL_API_TOKEN:-}
+  INITIAL_CASH: ${INITIAL_CASH:-100000}
+  ASSET_UNIVERSE: ${ASSET_UNIVERSE:-BTC,ETH,SOL}
+  FUTURES_UNIVERSE: ${FUTURES_UNIVERSE:-BTCUSDT,ETHUSDT,SOLUSDT}
+  MIN_SIGNAL_SCORE: ${MIN_SIGNAL_SCORE:-0.82}
+  RISK_PER_TRADE: ${RISK_PER_TRADE:-0.01}
+  INITIAL_POSITION_RISK: ${INITIAL_POSITION_RISK:-0.0075}
+  ADD_POSITION_RISK: ${ADD_POSITION_RISK:-0.0025}
+  MAX_ASSET_EXPOSURE: ${MAX_ASSET_EXPOSURE:-0.50}
+  MAX_OPEN_POSITIONS: ${MAX_OPEN_POSITIONS:-10}
+  MAX_GROSS_EXPOSURE: ${MAX_GROSS_EXPOSURE:-3.0}
+  MAX_NET_EXPOSURE: ${MAX_NET_EXPOSURE:-1.5}
+  MAX_CORRELATION_CLUSTER_EXPOSURE: ${MAX_CORRELATION_CLUSTER_EXPOSURE:-1.0}
+  MAX_LEVERAGE: ${MAX_LEVERAGE:-3}
+  DAILY_DRAWDOWN_LIMIT: ${DAILY_DRAWDOWN_LIMIT:-0.03}
+  TOTAL_DRAWDOWN_LIMIT: ${TOTAL_DRAWDOWN_LIMIT:-0.20}
+  CAPITAL_EPISODE_LOSS_LIMIT: ${CAPITAL_EPISODE_LOSS_LIMIT:-0.05}
+  TAKER_FEE_BPS: ${TAKER_FEE_BPS:-8}
+  BASE_SLIPPAGE_BPS: ${BASE_SLIPPAGE_BPS:-3}
+  MAX_SPREAD_BPS: ${MAX_SPREAD_BPS:-10}
+  MARKET_DATA_MAX_AGE_SECONDS: ${MARKET_DATA_MAX_AGE_SECONDS:-10}
+  DECISION_OPEN_CONFIDENCE: ${DECISION_OPEN_CONFIDENCE:-0.70}
+  DECISION_ADD_CONFIDENCE: ${DECISION_ADD_CONFIDENCE:-0.80}
+  CANDIDATE_TTL_SECONDS: ${CANDIDATE_TTL_SECONDS:-120}
+  DECISION_CYCLE_SECONDS: ${DECISION_CYCLE_SECONDS:-900}
+  STRATEGY_REGISTRY_PATH: /app/data/strategy_registry.json
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_PROJECT: ${OPENAI_PROJECT:-}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+  OPENAI_EXTRACTION_MODEL: ${OPENAI_EXTRACTION_MODEL:-gpt-5.6-luna}
+  OPENAI_DECISION_MODEL: ${OPENAI_DECISION_MODEL:-gpt-5.6-terra}
+  OPENAI_RESEARCH_MODEL: ${OPENAI_RESEARCH_MODEL:-gpt-5.6-sol}
+  OPENAI_REQUEST_TIMEOUT_SECONDS: ${OPENAI_REQUEST_TIMEOUT_SECONDS:-20}
+  WEB_SEARCH_ALLOWED_DOMAINS: ${WEB_SEARCH_ALLOWED_DOMAINS:-developers.binance.com,github.com}
+  X_CONTENT_TO_OPENAI_ALLOWED: ${X_CONTENT_TO_OPENAI_ALLOWED:-false}
+  X_BEARER_TOKEN: ${X_BEARER_TOKEN:-}
+  X_ALLOWED_ACCOUNT_IDS: ${X_ALLOWED_ACCOUNT_IDS:-}
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+  GITHUB_ALLOWED_REPOSITORIES: ${GITHUB_ALLOWED_REPOSITORIES:-}
+  INTELLIGENCE_STREAM_NAME: ${INTELLIGENCE_STREAM_NAME:-trader:external-evidence}
+  INTELLIGENCE_POLL_SECONDS: ${INTELLIGENCE_POLL_SECONDS:-300}
+  INTELLIGENCE_EVIDENCE_TTL_SECONDS: ${INTELLIGENCE_EVIDENCE_TTL_SECONDS:-3600}
+  GITHUB_POLL_LIMIT: ${GITHUB_POLL_LIMIT:-30}
+  X_STREAM_RECONNECT_SECONDS: ${X_STREAM_RECONNECT_SECONDS:-5}
+  BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+  BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+  BINANCE_FUTURES_DEMO_URL: ${BINANCE_FUTURES_DEMO_URL:-https://demo-fapi.binance.com}
+  BINANCE_FUTURES_LIVE_URL: ${BINANCE_FUTURES_LIVE_URL:-https://fapi.binance.com}
+  BINANCE_FUTURES_DEMO_WS_URL: ${BINANCE_FUTURES_DEMO_WS_URL:-wss://demo-fstream.binance.com}
+  BINANCE_FUTURES_LIVE_WS_URL: ${BINANCE_FUTURES_LIVE_WS_URL:-wss://fstream.binance.com}
+  BINANCE_RECV_WINDOW_MS: ${BINANCE_RECV_WINDOW_MS:-5000}
+  ENTRY_ORDER_WAIT_SECONDS: ${ENTRY_ORDER_WAIT_SECONDS:-5}
+  ENTRY_PRICE_PROTECTION_BPS: ${ENTRY_PRICE_PROTECTION_BPS:-20}
+  CAPITAL_ALLOCATION_FRACTION: ${CAPITAL_ALLOCATION_FRACTION:-1.0}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trader}
+      POSTGRES_USER: ${POSTGRES_USER:-trader}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paper-local-change-me}
+    volumes:
+      - trader-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - trader-backend
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1"
+    volumes:
+      - trader-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - trader-backend
+
+  trader-api:
+    profiles: ["legacy"]
+    build: .
+    command:
+      - uvicorn
+      - crypto_event_trader.api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - ${TRUSTED_PROXY_IPS:-127.0.0.1}
+    environment:
+      <<: *trader-environment
+      BINANCE_API_KEY: ""
+      BINANCE_API_SECRET: ""
+      X_BEARER_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ""
+    volumes:
+      - trader-data:/app/data
+    ports:
+      - "${TRADER_API_BIND:-127.0.0.1}:${TRADER_API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-paper-api:
+    profiles: ["paper"]
+    build: .
+    command:
+      - uvicorn
+      - crypto_event_trader.paper_api:create_paper_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - ${TRUSTED_PROXY_IPS:-127.0.0.1}
+    environment:
+      <<: *trader-environment
+      TRADING_STAGE: paper
+      EXECUTION_VENUE: internal
+      LIVE_TRADING_ENABLED: "false"
+      ALLOW_BINANCE_PRODUCTION: "false"
+      BINANCE_API_KEY: ""
+      BINANCE_API_SECRET: ""
+      X_BEARER_TOKEN: ""
+      X_ALLOWED_ACCOUNT_IDS: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ""
+      GITHUB_ALLOWED_REPOSITORIES: ""
+      COINGECKO_API_KEY: ""
+      OPENAI_API_KEY: ""
+      OPENAI_PROJECT: ""
+    volumes:
+      - trader-data:/app/data
+    ports:
+      - "${TRADER_API_BIND:-127.0.0.1}:${TRADER_API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-paper-worker:
+    profiles: ["paper"]
+    build: .
+    command:
+      - crypto-paper-worker
+    environment:
+      <<: *trader-environment
+      TRADING_STAGE: paper
+      EXECUTION_VENUE: internal
+      LIVE_TRADING_ENABLED: "false"
+      ALLOW_BINANCE_PRODUCTION: "false"
+      BINANCE_API_KEY: ""
+      BINANCE_API_SECRET: ""
+      X_BEARER_TOKEN: ""
+      X_ALLOWED_ACCOUNT_IDS: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ""
+      GITHUB_ALLOWED_REPOSITORIES: ""
+      COINGECKO_API_KEY: ""
+    volumes:
+      - trader-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-external-api:
+    profiles: ["external"]
+    build: .
+    command:
+      - uvicorn
+      - crypto_event_trader.external_api:create_external_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - ${TRUSTED_PROXY_IPS:-127.0.0.1}
+    environment:
+      <<: *trader-environment
+      X_BEARER_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ""
+    volumes:
+      - trader-data:/app/data
+    ports:
+      - "${TRADER_EXTERNAL_API_BIND:-127.0.0.1}:${TRADER_EXTERNAL_API_PORT:-8002}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-worker:
+    profiles: ["external"]
+    build: .
+    command:
+      - crypto-trader-worker
+    environment:
+      <<: *trader-environment
+      X_BEARER_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ""
+    volumes:
+      - trader-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-intelligence-worker:
+    profiles: ["intelligence"]
+    build: .
+    command:
+      - crypto-intelligence-worker
+    environment: &intelligence-environment
+      <<: *trader-environment
+      # The extraction boundary must never receive exchange or control-plane credentials.
+      BINANCE_API_KEY: ""
+      BINANCE_API_SECRET: ""
+      CONTROL_API_TOKEN: ""
+      LIVE_TRADING_ENABLED: "false"
+      ALLOW_BINANCE_PRODUCTION: "false"
+      OPENAI_API_KEY: ${OPENAI_INTELLIGENCE_API_KEY:-}
+      OPENAI_PROJECT: ${OPENAI_INTELLIGENCE_PROJECT:-}
+      GITHUB_WEBHOOK_SECRET: ""
+    volumes:
+      - trader-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-intelligence-api:
+    profiles: ["intelligence"]
+    build: .
+    command:
+      - uvicorn
+      - crypto_event_trader.intelligence_api:create_intelligence_webhook_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - ${TRUSTED_PROXY_IPS:-127.0.0.1}
+    environment:
+      <<: *intelligence-environment
+      # The webhook ingress verifies and persists source events; only the worker may call OpenAI.
+      OPENAI_API_KEY: ""
+      OPENAI_PROJECT: ""
+      X_BEARER_TOKEN: ""
+      GITHUB_TOKEN: ""
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+    ports:
+      - "${TRADER_INTELLIGENCE_API_BIND:-127.0.0.1}:${TRADER_INTELLIGENCE_API_PORT:-8003}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+      - trader-egress
+
+  trader-research-validator:
+    profiles: ["research"]
+    build: .
+    command:
+      - crypto-research-validator
+      - --manifest
+      - /app/research/manifest.json
+      - --sha256
+      - ${RESEARCH_MANIFEST_SHA256:-UNSET}
+    # Deliberately do not inherit x-trader-environment: this one-shot validator needs only
+    # PostgreSQL and the operator-pinned, read-only manifest. It has no egress network and no
+    # Binance, OpenAI, X, GitHub, Redis, or control-plane credentials.
+    environment:
+      AUDIT_DATABASE_URL: postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-paper-local-change-me}@postgres:5432/${POSTGRES_DB:-trader}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: ${RESEARCH_MANIFEST_PATH:-./research-manifest.json}
+        target: /app/research/manifest.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-backend
+
+  company-api:
+    profiles: ["company"]
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        company-events-bootstrap --database /app/data/company_events.db
+        --sample /app/data/company_event_sample.json &&
+        uvicorn company_event_monitor.api:app --host 0.0.0.0 --port 8000
+    environment:
+      COMPANY_EVENT_DB: /app/data/company_events.db
+    volumes:
+      - company-data:/app/data
+    ports:
+      - "${COMPANY_API_BIND:-127.0.0.1}:${COMPANY_API_PORT:-8001}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-egress
+
+  company-dashboard:
+    profiles: ["company"]
+    build: .
+    command:
+      - streamlit
+      - run
+      - src/company_event_monitor/dashboard.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --browser.gatherUsageStats=false
+    environment:
+      COMPANY_EVENT_API: http://company-api:8000
+    ports:
+      - "${COMPANY_DASHBOARD_BIND:-127.0.0.1}:${COMPANY_DASHBOARD_PORT:-8501}:8501"
+    depends_on:
+      company-api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - trader-egress
+
+volumes:
+  trader-postgres:
+  trader-redis:
+  trader-data:
+  company-data:
+
+networks:
+  trader-backend:
+    internal: true
+  trader-egress:

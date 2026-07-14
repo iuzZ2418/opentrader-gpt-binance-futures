@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a testable improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete research, safety, execution, or usability problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe inputs, outputs, failure behavior, and evidence required.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and verification
+      description: How should this fail closed, and how can it be tested?
+    validations:
+      required: true

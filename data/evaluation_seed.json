@@ -1,0 +1,14 @@
+[
+  {"id":"order-up","text":"示例公司本期订单增长32%。","expected_event_types":["order_growth"],"expected_numbers":["32%"]},
+  {"id":"receivable","text":"示例公司部分客户回款周期延长至180天，应收账款增加45%。","expected_event_types":["receivable_pressure"],"expected_numbers":["180天","45%"]},
+  {"id":"legal-reference","text":"示例公司遵守《上市公司股东减持股份管理暂行办法》，不存在违规事项。","expected_event_types":[]},
+  {"id":"customer-loss","text":"示例公司因合作终止出现客户流失。","expected_event_types":["customer_loss"]},
+  {"id":"production-stop","text":"示例公司部分生产线临时停工。","expected_event_types":["production_suspension"]},
+  {"id":"overseas-pressure","text":"示例公司海外需求下降，出口下降12%。","expected_event_types":["overseas_demand_pressure"],"expected_numbers":["12%"]},
+  {"id":"capex-cut","text":"示例公司决定削减资本开支。","expected_event_types":["capex_reduction"]},
+  {"id":"goodwill","text":"示例公司计提商誉减值2.5亿元。","expected_event_types":["goodwill_impairment"],"expected_numbers":["2.5亿元"]},
+  {"id":"subsidy","text":"示例公司收到政府补助300万元。","expected_event_types":["subsidy"],"expected_numbers":["300万元"]},
+  {"id":"management","text":"示例公司总经理辞职。","expected_event_types":["management_change"]},
+  {"id":"no-event","text":"示例公司坚持稳健经营并持续提升管理水平。","expected_event_types":[]},
+  {"id":"negated-litigation","text":"示例公司不存在重大诉讼，不涉及仲裁事项。","expected_event_types":[]}
+]

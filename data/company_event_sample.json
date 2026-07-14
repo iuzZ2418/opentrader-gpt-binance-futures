@@ -1,0 +1,10 @@
+{
+  "companies": [
+    {"company_id": "demo-auto", "name": "示例汽车零部件", "ticker": "000001", "aliases": ["示例公司"], "industry": "汽车零部件"}
+  ],
+  "documents": [
+    {"source_id": "ir-2026-01", "source_name": "投资者关系活动记录", "source_tier": "B", "doc_type": "ir_record", "title": "示例公司投资者关系活动记录", "text": "示例公司表示回款整体正常，订单充足。", "published_at": "2026-01-10T09:00:00+08:00", "url": "https://example.invalid/ir"},
+    {"source_id": "reply-2026-02", "source_name": "交易所问询回复", "source_tier": "A", "doc_type": "inquiry_reply", "title": "示例公司关于问询函的回复", "text": "示例公司部分客户回款周期延长至180天，应收账款增加45%；受需求下降影响，订单下降。", "published_at": "2026-02-20T18:00:00+08:00", "url": "https://example.invalid/reply"},
+    {"source_id": "notice-2026-03", "source_name": "公司公告", "source_tier": "A", "doc_type": "announcement", "title": "示例公司重大合同公告", "text": "示例公司签订合同，合同金额2.5亿元。", "published_at": "2026-03-08T18:00:00+08:00", "url": "https://example.invalid/contract"}
+  ]
+}

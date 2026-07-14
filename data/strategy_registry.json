@@ -1,0 +1,44 @@
+{
+  "champion": {
+    "version": "trend-breakout-v1",
+    "momentum_windows_1h": [
+      24,
+      72,
+      168
+    ],
+    "donchian_windows_4h": [
+      42,
+      126
+    ],
+    "minimum_directional_votes": 3,
+    "ewma_span_hours": 720,
+    "target_annualized_volatility": 0.4,
+    "normal_risk_scale": 1.0,
+    "caution_risk_scale": 0.5,
+    "blocked_risk_scale": 0.0,
+    "prompt_version": "trade-approval-v1"
+  },
+  "challengers": [],
+  "versions": [
+    {
+      "version": "trend-breakout-v1",
+      "momentum_windows_1h": [
+        24,
+        72,
+        168
+      ],
+      "donchian_windows_4h": [
+        42,
+        126
+      ],
+      "minimum_directional_votes": 3,
+      "ewma_span_hours": 720,
+      "target_annualized_volatility": 0.4,
+      "normal_risk_scale": 1.0,
+      "caution_risk_scale": 0.5,
+      "blocked_risk_scale": 0.0,
+      "prompt_version": "trade-approval-v1"
+    }
+  ],
+  "promotion_records": []
+}
