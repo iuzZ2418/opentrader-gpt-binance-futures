@@ -4,7 +4,7 @@
 
 ### An auditable, fail-closed trading stack where AI can say **no**, but can never bypass risk.
 
-[![Tests](https://img.shields.io/badge/tests-380%20passed-22c55e?style=for-the-badge)](#verification)
+[![CI](https://img.shields.io/github/actions/workflow/status/iuzZ2418/opentrader-gpt-binance-futures/ci.yml?branch=main&style=for-the-badge&label=tests)](https://github.com/iuzZ2418/opentrader-gpt-binance-futures/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![Binance](https://img.shields.io/badge/Binance-USD%E2%93%88--M%20Futures-F0B90B?style=for-the-badge&logo=binance&logoColor=black)](https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/Introduction)
 [![License](https://img.shields.io/badge/license-MIT-8b5cf6?style=for-the-badge)](LICENSE)
@@ -115,7 +115,7 @@ Promotion from backtest to paper, Demo, 10%, 25%, and 100% capital still require
 ## Verification
 
 ```text
-380 tests passed
+382 tests passed
 Ruff: all checks passed
 Compose credential/network isolation: static checks passed
 Live trading: locked by default
